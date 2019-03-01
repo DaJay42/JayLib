@@ -69,6 +69,11 @@ public class MatrixDense extends Matrix{
 	}
 	
 	@Override
+	public boolean isView(){
+		return false;
+	}
+	
+	@Override
 	protected double internalModValueAt(int e, double off) {
 		values[e] += off;
 		return values[e];

@@ -302,6 +302,11 @@ public abstract class Matrix implements Serializable, IntToDoubleFunction, IntIn
 	 * @return iff this is Sparse*/
 	public abstract boolean isSparse();
 	
+	/**Returns true iff this Matrix is a View,
+	 * i.e. if values are stored in a underlying Matrix instance.
+	 * @return iff this is a View*/
+	public abstract boolean isView();
+	
 	
 	
 	
@@ -479,6 +484,31 @@ public abstract class Matrix implements Serializable, IntToDoubleFunction, IntIn
 		return r;
 	}
 	
+	/**Gets a View of the ith row as Vector
+	 * <p/>Runs in O(1).
+	 * @param i row
+	 * @return View of row
+	 */
+	public MatrixBlockView getRowView(int i){
+		assertBounds(i, 0);
+		return new MatrixBlockView(this, i, 0, 1, m);
+	}
+	
+	/**Replace the ith row with the given Vector
+	 * <p/>Runs in O(m).
+	 * @param i row
+	 * @return this
+	 */
+	public Matrix setRow(int i, Matrix rowVector){
+		if(rowVector.n != 1 || m != rowVector.m)
+			throw new MatrixDimensionMismatchException();
+		assertBounds(i, 0);
+		
+		IntStream.range(0, m).forEach(j -> internalSetValueAt(i, j, rowVector.internalGetValueAt(j)));
+		
+		return this;
+	}
+	
 	/**Gets a copy of the jth column as Vector
 	 * <p/>Runs in O(n).
 	 * @param j column
@@ -489,6 +519,43 @@ public abstract class Matrix implements Serializable, IntToDoubleFunction, IntIn
 		Matrix r = zeroes(n, 1, isSparse());
 		r.fill((i) -> internalGetValueAt(i, j));
 		return r;
+	}
+	
+	/**Gets a View of the jth column as Vector
+	 * <p/>Runs in O(1).
+	 * @param j column
+	 * @return View of column
+	 */
+	public MatrixBlockView getColumnView(int j){
+		assertBounds(0, j);
+		return new MatrixBlockView(this, 0, j, n, 1);
+	}
+	
+	/**Replace the jth column with the given Vector
+	 * <p/>Runs in O(m).
+	 * @param j col
+	 * @return this
+	 */
+	public Matrix setColumn(int j, Matrix colVector){
+		if(colVector.m != m || 1 != colVector.n)
+			throw new MatrixDimensionMismatchException();
+		assertBounds(0, j);
+		
+		IntStream.range(0, m).forEach(i -> internalSetValueAt(i, j, colVector.internalGetValueAt(i)));
+		
+		return this;
+	}
+	
+	/**Gets a View of the selected block as MatrixView
+	 * <p/>Runs in O(1).
+	 * @param startRow first row of the block
+	 * @param startCol first column of the block
+	 * @param rows number of rows of the block
+	 * @param cols number of columns of the block
+	 * @return View of block
+	 */
+	public MatrixBlockView getBlockView(int startRow, int startCol, int rows, int cols){
+		return new MatrixBlockView(this, startRow, startCol, rows, cols);
 	}
 	
 
@@ -514,6 +581,20 @@ public abstract class Matrix implements Serializable, IntToDoubleFunction, IntIn
 		double[] ds = new double[n];
 		Arrays.setAll(ds, (i) -> internalGetValueAt(i, j));
 		return ds;
+	}
+	
+	
+	/**Returns a double[][] that is equal in values and dimensions
+	 * to the internal values of the given block of this Matrix.
+	 * This creates a copy; future modifications to either
+	 * will not be reflected in the other.
+	 * <p>
+	 * Whenever possible, use getValueAt, getRow, or getColumn instead.
+	 * <p/>Runs in O(n*m).
+	 * @return copy of the values
+	 */
+	public double[][] getValuesInBlock(int startRow, int startCol, int rows, int cols){
+		return getBlockView(startRow,startCol,rows,cols).getValues();
 	}
 	
 	/**Returns a double[][] that is equal in values and dimensions

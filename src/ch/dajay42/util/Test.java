@@ -1,6 +1,7 @@
 package ch.dajay42.util;
 
 import java.util.Arrays;
+import java.util.Objects;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.*;
 
@@ -15,8 +16,9 @@ import ch.dajay42.math.linAlg.MatrixLazy;
 public class Test {
 
 	public static void main(String[] args) {
-		lazyMatrixTest();
+		//lazyMatrixTest();
 		//testParallelSetAll();
+		testSpeed(1000);
 	}
 	
 	public static void testSpeed(int n){
@@ -44,10 +46,8 @@ public class Test {
 	 * @param array array to be filled
 	 * @param source Method that generates elements.
 	 */
-	public static void fill(double[] array,  Supplier<Double> source){
-		for(int i = 0; i < array.length; i++){
-			array[i] = source.get();
-		}
+	public static void fill(double[] array,  DoubleSupplier source){
+		Arrays.setAll(array, __ -> source.getAsDouble());
 	}
 	/**Fills array {@code out by applying the function {@code f} to the corresponding element of {@code in}.<br/>
 	 * If {@code in.length > out.length}, the additional elements are ignored.
@@ -58,9 +58,7 @@ public class Test {
 	 * @return
 	 */
 	public static void arrayMap(DoubleUnaryOperator f, double[] in, double[] out){
-		for(int i = 0; i < out.length; i++){
-			out[i] = f.applyAsDouble(in[i]);
-		}
+		Arrays.setAll(out, e -> f.applyAsDouble(in[e]));
 	}
 	
 	public static void testSCLI(String[] args){

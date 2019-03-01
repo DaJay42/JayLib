@@ -55,4 +55,9 @@ public class ColumnVectorSparse extends Matrix{
 	public boolean isSparse(){
 		return true;
 	}
+	
+	@Override
+	public boolean isView(){
+		return false;
+	}
 }

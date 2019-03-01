@@ -73,6 +73,11 @@ public class MatrixLazy extends Matrix {
 	}
 	
 	@Override
+	public boolean isView(){
+		return false;
+	}
+	
+	@Override
 	protected double internalModValueAt(int i, int j, double off) {
 		return internalModValueAt(i*m+j, off);
 	}

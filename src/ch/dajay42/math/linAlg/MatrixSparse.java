@@ -57,4 +57,9 @@ public class MatrixSparse extends Matrix{
 	public boolean isSparse(){
 		return true;
 	}
+	
+	@Override
+	public boolean isView(){
+		return false;
+	}
 }

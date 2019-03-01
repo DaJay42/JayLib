@@ -57,6 +57,11 @@ public class ColumnVectorDense extends Matrix{
 	}
 	
 	@Override
+	public boolean isView(){
+		return false;
+	}
+	
+	@Override
 	public Matrix fill(double d) {
 		if(parallelize)
 			Arrays.parallelSetAll(values, (e) -> d);
