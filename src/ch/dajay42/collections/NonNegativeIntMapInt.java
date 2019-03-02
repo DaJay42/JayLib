@@ -53,7 +53,7 @@ public class NonNegativeIntMapInt{
 	}
 
 	public int get(final int key){
-        if (key < 0){
+        if (key < -1){
             throw new IndexOutOfBoundsException("Key must be non-negative!");
         }
         
