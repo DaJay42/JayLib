@@ -16,46 +16,46 @@ public class MatrixDense extends Matrix{
 	
 	
 	/**Creates new, zero-filled Matrix of size NxM
-	 * @param n rows
-	 * @param m columns
+	 * @param rows rows
+	 * @param cols columns
 	 */
 	@SuppressWarnings("WeakerAccess")
-	public MatrixDense(int n, int m){
-		super(n,m);
-		this.values = new double[s];
-		this.parallelize = s > PARALLEL_LIMIT;
+	public MatrixDense(int rows, int cols){
+		super(rows, cols);
+		this.values = new double[elems];
+		this.parallelize = elems > PARALLEL_LIMIT;
 	}
 
 
 	@Override
-	protected double internalGetValueAt(int i, int j){
-		int e = i*m+j;
-		return values[e];
+	protected double internalGetValueAt(int row, int col){
+		int elem = row * cols + col;
+		return values[elem];
 	}
 
 	@Override
-	protected void internalSetValueAt(int i, int j, double val){
-		int e = i*m+j;
-		values[e] = val;
+	protected void internalSetValueAt(int row, int col, double val){
+		int elem = row * cols + col;
+		values[elem] = val;
 	}
 	
 	@Override
-	protected double internalModValueAt(int i, int j, double off) {
-		int e = i*m+j;
-		values[e] += off;
-		return values[e];
+	protected double internalModValueAt(int row, int col, double off) {
+		int elem = row * cols + col;
+		values[elem] += off;
+		return values[elem];
 	}
 
 
 	@Override
-	protected double internalGetValueAt(int e) {
-		return values[e];
+	protected double internalGetValueAt(int elem) {
+		return values[elem];
 	}
 
 
 	@Override
-	protected void internalSetValueAt(int e, double val) {
-		values[e] = val;
+	protected void internalSetValueAt(int elem, double val) {
+		values[elem] = val;
 	}
 	
 	@Override
@@ -74,15 +74,15 @@ public class MatrixDense extends Matrix{
 	}
 	
 	@Override
-	protected double internalModValueAt(int e, double off) {
-		values[e] += off;
-		return values[e];
+	protected double internalModValueAt(int elem, double off) {
+		values[elem] += off;
+		return values[elem];
 	}
 	
 	@Override
 	public Matrix fill(double d) {
 		if(parallelize)
-			Arrays.parallelSetAll(values, (e) -> d);
+			Arrays.parallelSetAll(values, (elem) -> d);
 		else
 			Arrays.fill(values, d);
 		return this;
@@ -91,9 +91,9 @@ public class MatrixDense extends Matrix{
 	@Override
 	public Matrix fill(DoubleSupplier f) {
 		if(parallelize)
-			Arrays.parallelSetAll(values, (e) -> f.getAsDouble());
+			Arrays.parallelSetAll(values, (elem) -> f.getAsDouble());
 		else
-			Arrays.setAll(values, (e) -> f.getAsDouble());
+			Arrays.setAll(values, (elem) -> f.getAsDouble());
 		return this;
 	}
 	
@@ -108,7 +108,7 @@ public class MatrixDense extends Matrix{
 	
 	@Override
 	public Matrix fill(Matrix other) {
-		if(n != other.n || m != other.m){
+		if(rows != other.rows || cols != other.cols){
 			throw new MatrixDimensionMismatchException();
 		}
 		if(parallelize)
@@ -120,13 +120,13 @@ public class MatrixDense extends Matrix{
 	
 	@Override
 	public Matrix inplaceSum(Matrix b) {
-		if(m != b.m || n != b.n){
+		if(cols != b.cols || rows != b.rows){
 			throw new MatrixDimensionMismatchException();
 		}
 		if(parallelize)
-			Arrays.parallelSetAll(values, (e) -> values[e] + b.internalGetValueAt(e));
+			Arrays.parallelSetAll(values, (elem) -> values[elem] + b.internalGetValueAt(elem));
 		else
-			Arrays.setAll(values, (e) -> values[e] + b.internalGetValueAt(e));
+			Arrays.setAll(values, (elem) -> values[elem] + b.internalGetValueAt(elem));
 		return this;
 	}
 }

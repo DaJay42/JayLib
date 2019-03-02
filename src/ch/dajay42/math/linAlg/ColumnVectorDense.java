@@ -13,37 +13,37 @@ public class ColumnVectorDense extends Matrix{
 	private final boolean parallelize;
 	
 	@SuppressWarnings("WeakerAccess")
-	public ColumnVectorDense(int n) {
-		super(n, 1);
-		values = new double[n];
-		this.parallelize = s > PARALLEL_LIMIT;
+	public ColumnVectorDense(int rows) {
+		super(rows, 1);
+		values = new double[rows];
+		this.parallelize = elems > PARALLEL_LIMIT;
 	}
 
 	@Override
-	protected double internalGetValueAt(int i, int j) {
-		return values[i];
+	protected double internalGetValueAt(int row, int col) {
+		return values[row];
 	}
 
 	@Override
-	protected void internalSetValueAt(int i, int j, double val) {
-		values[i] = val;
+	protected void internalSetValueAt(int row, int col, double val) {
+		values[row] = val;
 	}
 
 	
 	@Override
-	protected double internalModValueAt(int i, int j, double off) {
-		values[i] += off;
-		return values[i];
+	protected double internalModValueAt(int row, int col, double off) {
+		values[row] += off;
+		return values[row];
 	}
 
 	@Override
-	protected double internalGetValueAt(int e) {
-		return values[e];
+	protected double internalGetValueAt(int elem) {
+		return values[elem];
 	}
 
 	@Override
-	protected void internalSetValueAt(int e, double val) {
-		values[e] = val;
+	protected void internalSetValueAt(int elem, double val) {
+		values[elem] = val;
 	}
 	
 	@Override
@@ -64,7 +64,7 @@ public class ColumnVectorDense extends Matrix{
 	@Override
 	public Matrix fill(double d) {
 		if(parallelize)
-			Arrays.parallelSetAll(values, (e) -> d);
+			Arrays.parallelSetAll(values, (elem) -> d);
 		else
 			Arrays.fill(values, d);
 		return this;
@@ -73,9 +73,9 @@ public class ColumnVectorDense extends Matrix{
 	@Override
 	public Matrix fill(DoubleSupplier f) {
 		if(parallelize)
-			Arrays.parallelSetAll(values, (e) -> f.getAsDouble());
+			Arrays.parallelSetAll(values, (elem) -> f.getAsDouble());
 		else
-			Arrays.setAll(values, (e) -> f.getAsDouble());
+			Arrays.setAll(values, (elem) -> f.getAsDouble());
 		return this;
 	}
 	
@@ -90,7 +90,7 @@ public class ColumnVectorDense extends Matrix{
 	
 	@Override
 	public Matrix fill(Matrix other) {
-		if(n != other.n || m != other.m){
+		if(rows != other.rows || cols != other.cols){
 			throw new MatrixDimensionMismatchException();
 		}
 		if(parallelize)
@@ -102,13 +102,13 @@ public class ColumnVectorDense extends Matrix{
 	
 	@Override
 	public Matrix inplaceSum(Matrix b) {
-		if(m != b.m || n != b.n){
+		if(cols != b.cols || rows != b.rows){
 			throw new MatrixDimensionMismatchException();
 		}
 		if(parallelize)
-			Arrays.parallelSetAll(values, (e) -> values[e] + b.internalGetValueAt(e));
+			Arrays.parallelSetAll(values, (elem) -> values[elem] + b.internalGetValueAt(elem));
 		else
-			Arrays.setAll(values, (e) -> values[e] + b.internalGetValueAt(e));
+			Arrays.setAll(values, (elem) -> values[elem] + b.internalGetValueAt(elem));
 		return this;
 	}
 }

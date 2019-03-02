@@ -11,11 +11,11 @@ public final class MatrixIndexOutOfBoundsException extends ArrayIndexOutOfBounds
 		super("Matrix error: Index is out of bounds.");
 	}
 	
-	public MatrixIndexOutOfBoundsException(int i, int j, int n, int m){
-		super("Matrix error: Index is out of bounds. Row must be between 0 and "+n+", was "+i+". Column must be between 0 and "+m+", was "+j+".");
+	public MatrixIndexOutOfBoundsException(int row, int col, int rows, int cols){
+		super("Matrix error: Index is out of bounds. Row must be between 0 and "+rows+", was "+row+". Column must be between 0 and "+cols+", was "+col+".");
 	}
 
-	public MatrixIndexOutOfBoundsException(int e, int s) {
-		super("Matrix error: Index is out of bounds. Element index must be between 0 and "+s+", was "+e+".");
+	public MatrixIndexOutOfBoundsException(int elem, int elems) {
+		super("Matrix error: Index is out of bounds. Element index must be between 0 and "+elems+", was "+elem+".");
 	}
 }

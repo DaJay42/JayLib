@@ -11,40 +11,38 @@ public class MatrixSparse extends Matrix{
 	
 	
 	@SuppressWarnings("WeakerAccess")
-	public MatrixSparse(int n, int m) {
-		super(n, m);
+	public MatrixSparse(int rows, int cols) {
+		super(rows, cols);
 		values = new HashMap<>(); // TODO: is there any usable specialized int-double map implementation?
 	}
 	
 	@Override
-	protected double internalGetValueAt(int i, int j) {
-		Integer e = i*m+j;
-		Double d = values.get(e);
+	protected double internalGetValueAt(int row, int col) {
+		Double d = values.get(row * cols + col);
 		return (d == null ? 0.0d : d);
 	}
 
 	@Override
-	protected void internalSetValueAt(int i, int j, double val) {
-		Integer e = i*m+j;
+	protected void internalSetValueAt(int row, int col, double val) {
 		if(val == 0.0d){
-			values.remove(e);
+			values.remove(row * cols + col);
 		}else{
-			values.put(e, val);
+			values.put(row * cols + col, val);
 		}
 	}
 
 	@Override
-	protected double internalGetValueAt(int e) {
-		Double d = values.get(e);
+	protected double internalGetValueAt(int elem) {
+		Double d = values.get(elem);
 		return (d == null ? 0.0d : d);
 	}
 
 	@Override
-	protected void internalSetValueAt(int e, double val) {
+	protected void internalSetValueAt(int elem, double val) {
 		if(val == 0.0d){
-			values.remove(e);
+			values.remove(elem);
 		}else{
-			values.put(e, val);
+			values.put(elem, val);
 		}
 	}
 	

@@ -11,38 +11,38 @@ public class RowVectorSparse extends Matrix{
 	
 	
 	@SuppressWarnings("WeakerAccess")
-	public RowVectorSparse(int m) {
-		super(1, m);
+	public RowVectorSparse(int cols) {
+		super(1, cols);
 		values = new HashMap<>();
 	}
 
 	@Override
-	protected double internalGetValueAt(int i, int j) {
-		Double d = values.get(j);
+	protected double internalGetValueAt(int row, int col) {
+		Double d = values.get(col);
 		return (d == null ? 0.0d : d);
 	}
 
 	@Override
-	protected void internalSetValueAt(int i, int j, double val) {
+	protected void internalSetValueAt(int row, int col, double val) {
 		if(val == 0.0d){
-			values.remove(j);
+			values.remove(col);
 		}else{
-			values.put(j, val);
+			values.put(col, val);
 		}
 	}
 
 	@Override
-	protected double internalGetValueAt(int e) {
-		Double d = values.get(e);
+	protected double internalGetValueAt(int elem) {
+		Double d = values.get(elem);
 		return (d == null ? 0.0d : d);
 	}
 
 	@Override
-	protected void internalSetValueAt(int e, double val) {
+	protected void internalSetValueAt(int elem, double val) {
 		if(val == 0.0d){
-			values.remove(e);
+			values.remove(elem);
 		}else{
-			values.put(e, val);
+			values.put(elem, val);
 		}
 	}
 	
