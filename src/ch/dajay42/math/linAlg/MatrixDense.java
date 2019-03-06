@@ -9,7 +9,6 @@ public class MatrixDense extends Matrix{
 	
 	private static final long serialVersionUID = 1L;
 	
-	
 	private final double[] values;
 	
 	private final boolean parallelize;
@@ -29,19 +28,19 @@ public class MatrixDense extends Matrix{
 
 	@Override
 	protected double internalGetValueAt(int row, int col){
-		int elem = row * cols + col;
+		int elem = asElemIndex(row, col);
 		return values[elem];
 	}
 
 	@Override
 	protected void internalSetValueAt(int row, int col, double val){
-		int elem = row * cols + col;
+		int elem = asElemIndex(row, col);
 		values[elem] = val;
 	}
 	
 	@Override
 	protected double internalModValueAt(int row, int col, double off) {
-		int elem = row * cols + col;
+		int elem = asElemIndex(row, col);
 		values[elem] += off;
 		return values[elem];
 	}

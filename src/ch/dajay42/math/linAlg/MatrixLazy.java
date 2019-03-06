@@ -43,7 +43,7 @@ public class MatrixLazy extends Matrix {
 
 	@Override
 	protected double internalGetValueAt(int row, int col) {
-		return internalGetValueAt(row * cols + col);
+		return internalGetValueAt(asElemIndex(row, col));
 	}
 
 	@Override
@@ -53,7 +53,7 @@ public class MatrixLazy extends Matrix {
 
 	@Override
 	protected void internalSetValueAt(int row, int col, double val) {
-		internalSetValueAt(row * cols + col, val);
+		internalSetValueAt(asElemIndex(row, col), val);
 	}
 
 	@Override
@@ -79,7 +79,7 @@ public class MatrixLazy extends Matrix {
 	
 	@Override
 	protected double internalModValueAt(int row, int col, double off) {
-		return internalModValueAt(row * cols + col, off);
+		return internalModValueAt(asElemIndex(row, col), off);
 	}
 	
 	@Override
@@ -98,13 +98,13 @@ public class MatrixLazy extends Matrix {
 	@Override
 	public MatrixLazy getRow(int row) {
 		assertBounds(row, 0);
-		return new MatrixLazy(1, cols, (col) -> f.applyAsDouble(col + row * cols));
+		return new MatrixLazy(1, cols, (col) -> f.applyAsDouble(asElemIndex(row, col)));
 	}
 
 	@Override
 	public MatrixLazy getColumn(int col) {
 		assertBounds(0, col);
-		return new MatrixLazy(rows, 1, (row) -> f.applyAsDouble(row * cols + col));
+		return new MatrixLazy(rows, 1, (row) -> f.applyAsDouble(asElemIndex(row, col)));
 	}
 
 	@Override
@@ -130,7 +130,7 @@ public class MatrixLazy extends Matrix {
 		if(rows != values.length || cols != values[0].length)
 			throw new MatrixDimensionMismatchException();
 		
-		f = (elem) -> values[elem % cols][elem / cols];
+		f = (elem) -> values[asRowIndex(elem)][asColIndex(elem)];
 		return this;
 	}
 
@@ -153,7 +153,7 @@ public class MatrixLazy extends Matrix {
 	}
 
 	private MatrixLazy internalMultiplySimple(MatrixLazy b){
-		return new MatrixLazy(rows, b.cols, (elem) -> this.getRow(elem % b.cols).dot(b.getColumn(elem / b.cols))).cacheIfLazy();
+		return new MatrixLazy(rows, b.cols, (elem) -> this.getRow(b.asColIndex(elem)).dot(b.getColumn(b.asRowIndex(elem)))).cacheIfLazy();
 	}
 	
 	
@@ -171,7 +171,7 @@ public class MatrixLazy extends Matrix {
 
 	@Override
 	public MatrixLazy transpose() {
-		return new MatrixLazy(cols, rows, (elem) -> f.applyAsDouble(elem / cols * rows + elem % cols));
+		return new MatrixLazy(cols, rows, (elem) -> f.applyAsDouble(asRowIndex(elem) * rows + asColIndex(elem)));
 	}
 	
 	@SuppressWarnings("OptionalGetWithoutIsPresent")

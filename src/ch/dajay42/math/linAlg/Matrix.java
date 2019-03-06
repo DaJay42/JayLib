@@ -312,6 +312,17 @@ public abstract class Matrix implements Serializable, IntToDoubleFunction, IntIn
 	
 	// DEFAULT IMPLEMENTATIONS -- OVERRIDE AS NECESSARY
 	
+	public int asElemIndex(int row, int col){
+		return row * cols + col;
+	}
+	
+	public int asRowIndex(int elem){
+		return elem / cols;
+	}
+	
+	public int asColIndex(int elem){
+		return elem % cols;
+	}
 	
 	/** Gets value at position (row,col), checks for validity of indices.
 	 * <p/>Runs in O(1).
@@ -546,7 +557,9 @@ public abstract class Matrix implements Serializable, IntToDoubleFunction, IntIn
 		return this;
 	}
 	
-	/**Gets a View of the selected block as MatrixView
+	/**Gets a View of the selected block as MatrixView.
+	 *<br/>Note that the number of rows asn columns in the View may
+	 *<br/>exceed those in the underlying matrix; the resultant indices will wrap around.
 	 * <p/>Runs in O(1).
 	 * @param startRow first row of the block
 	 * @param startCol first column of the block
@@ -558,6 +571,13 @@ public abstract class Matrix implements Serializable, IntToDoubleFunction, IntIn
 		return new MatrixBlockView(this, startRow, startCol, rows, cols);
 	}
 	
+	public MatrixMaskedRowView exceptRowView(int row){
+		return new MatrixMaskedRowView(this, row);
+	}
+	
+	public MatrixMaskedColView exceptColView(int col){
+		return new MatrixMaskedColView(this, col);
+	}
 
 	/**Gets a copy of the ith row as double[]
 	 * <p/>Runs in O(cols).
@@ -949,14 +969,28 @@ public abstract class Matrix implements Serializable, IntToDoubleFunction, IntIn
 		return this;
 	}
 	
+	public double det(){
+		if(cols != rows)
+			throw new MatrixNotSquareException(rows, cols);
+		if(cols == 1){
+			return getValueAt(0);
+		}else if(cols == 2){
+			return internalGetValueAt(0,0) * internalGetValueAt(1,1)
+					- internalGetValueAt(0,1) * internalGetValueAt(1,0);
+		}else { //TODO: factorization-based efficient impl.
+			final MatrixMaskedRowView bottom = exceptRowView(0);
+			return IntStream.range(0, cols).parallel().mapToDouble((col) ->
+					Math.pow(-1, col) * internalGetValueAt(0, col) * bottom.exceptColView(col).det())
+					.sum();
+		}
+	}
+	
+	
 	public boolean equals(Matrix other) {
 		if(rows != other.rows || cols != other.cols)
 			return false;
-		for(int elem = 0; elem < elems; elem++){
-			if(Double.compare(internalGetValueAt(elem), other.internalGetValueAt(elem)) != 0)
-				return false;
-		}
-		return true;
+		return IntStream.range(0, elems).parallel().allMatch((elem) ->
+				Double.compare(internalGetValueAt(elem), other.internalGetValueAt(elem)) == 0);
 	}
 	
 	@Override

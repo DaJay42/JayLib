@@ -18,16 +18,16 @@ public class MatrixSparse extends Matrix{
 	
 	@Override
 	protected double internalGetValueAt(int row, int col) {
-		Double d = values.get(row * cols + col);
+		Double d = values.get(asElemIndex(row, col));
 		return (d == null ? 0.0d : d);
 	}
 
 	@Override
 	protected void internalSetValueAt(int row, int col, double val) {
 		if(val == 0.0d){
-			values.remove(row * cols + col);
+			values.remove(asElemIndex(row, col));
 		}else{
-			values.put(row * cols + col, val);
+			values.put(asElemIndex(row, col), val);
 		}
 	}
 

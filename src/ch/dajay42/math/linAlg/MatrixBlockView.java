@@ -8,8 +8,6 @@ public class MatrixBlockView extends Matrix{
 	
 	public MatrixBlockView(Matrix base, int rowOff, int colOff, int rows, int cols){
 		super(rows, cols);
-		base.assertBounds(rowOff, colOff);
-		base.assertBounds(rowOff + rows, colOff + cols);
 		this.base = base;
 		this.rowOff = rowOff;
 		this.colOff = colOff;
@@ -17,22 +15,22 @@ public class MatrixBlockView extends Matrix{
 	
 	@Override
 	protected double internalGetValueAt(int row, int col){
-		return base.internalGetValueAt(row + rowOff, col + colOff);
+		return base.internalGetValueAt((row + rowOff) % base.rows, (col + colOff) % base.cols);
 	}
 	
 	@Override
 	protected double internalGetValueAt(int elem){
-		return internalGetValueAt(elem % cols, elem / cols);
+		return internalGetValueAt(asRowIndex(elem), asColIndex(elem));
 	}
 	
 	@Override
 	protected void internalSetValueAt(int row, int col, double val){
-		base.internalSetValueAt(row + rowOff, col + colOff, val);
+		base.internalSetValueAt((row + rowOff) % base.rows, (col + colOff) % base.cols, val);
 	}
 	
 	@Override
 	protected void internalSetValueAt(int elem, double val){
-		internalSetValueAt(elem % cols, elem / cols, val);
+		internalSetValueAt(asRowIndex(elem), asColIndex(elem), val);
 	}
 	
 	@Override
