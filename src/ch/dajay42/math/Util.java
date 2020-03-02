@@ -31,7 +31,13 @@ public final class Util {
 	public static final Comparator<Double> ABS_VALUE_COMPARATOR = Comparator.comparingDouble(Math::abs);
 	
 	public static double clamp(double min, double max, double val){
-		return Math.min(max, Math.min(max, val));
+		if(val < max){
+			if(val > min)
+				return val;
+			else
+				return min;
+		}else
+			return max;
 	}
 	
 	public static double lerp(double min, double max, double p){
@@ -87,5 +93,15 @@ public final class Util {
 	
 	public static int gcd(int a, int b){
 		return b == 0 ? a : gcd(b,a % b);
+	}
+	
+	public static int gcd2(int a, int b){
+		int m;
+		while(b != 0){
+			m = a % b;
+			a = b;
+			b = m;
+		}
+		return a;
 	}
 }

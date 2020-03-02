@@ -14,7 +14,7 @@ public class SimpleCLI implements Runnable{
 	
 	public String greeting = "Starting SimpleCLI 1.0";
 	
-	public String cmdNotFound = "Unknown command. Type 'help' for a list of commands.";
+	public String cmdNotFound = "Unknown command '%s'. Type 'help' for a list of commands.";
 
 	public SimpleCLI() {
 		registerCommmand(new CmdHelp(commands));
@@ -53,7 +53,7 @@ public class SimpleCLI implements Runnable{
 		}
 	}
 	
-	public void readContinously(){
+	public void readContinuously(){
 		try(Scanner in = new Scanner(System.in)){
 			while(true){
 				System.err.flush();
@@ -89,7 +89,7 @@ public class SimpleCLI implements Runnable{
 			if(cmd != null)
 				cmd.execute(args);
 			else
-				System.out.println(cmdNotFound);
+				System.out.println(String.format(cmdNotFound, strings[0]));
 		}
 	}
 
@@ -97,7 +97,7 @@ public class SimpleCLI implements Runnable{
 	@Override
 	public void run() {
 		greet();
-		readContinously();
+		readContinuously();
 	}
 	
 	public void greet(){

@@ -4,11 +4,11 @@ import java.util.Map;
 
 public class CmdHelp extends Command {
 
-	public static final String rebreak = "\r\n\t";
+	private static final String rebreak = "\r\n\t";
 	
-	Map<String, Command> commands;
+	private Map<String, Command> commands;
 	
-	public CmdHelp(Map<String, Command> commands) {
+	CmdHelp(Map<String, Command> commands) {
 		super("help", "[<command>]", "Prints a list of available commands, or details about a single command, if one is provided.");
 		this.commands = commands;
 	}
@@ -25,7 +25,7 @@ public class CmdHelp extends Command {
 			}
 		}else{
 			System.out.println("Available commands:");
-			for(Command cmd : commands.values()){;
+			for(Command cmd : commands.values()){
 				System.out.print(rebreak+cmd.argPattern);
 			}
 			System.out.println();

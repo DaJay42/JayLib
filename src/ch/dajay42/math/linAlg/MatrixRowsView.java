@@ -1,22 +1,22 @@
 package ch.dajay42.math.linAlg;
 
-public class MatrixMaskedRowView extends MatrixView{
+public class MatrixRowsView extends MatrixView{
 	
-	final int maskedRow;
+	protected final int startRow;
 	
-	public MatrixMaskedRowView(Matrix base, int maskedRow){
-		super(base.rows - 1, base.cols, base);
-		this.maskedRow = maskedRow;
+	public MatrixRowsView(int startRow, int rows, Matrix base){
+		super(rows, base.cols, base);
+		this.startRow = startRow;
 	}
 	
 	@Override
 	protected int transformElemIndex(int elem){
-		return asRowIndex(elem) >= maskedRow ? elem + cols : elem;
+		return elem + startRow * cols;
 	}
 	
 	@Override
 	protected int transformRowIndex(int row, int col){
-		return row >= maskedRow ? row + 1 : row;
+		return row + startRow;
 	}
 	
 	@Override

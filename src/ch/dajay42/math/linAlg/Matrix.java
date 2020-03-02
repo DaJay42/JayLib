@@ -1,11 +1,15 @@
 package ch.dajay42.math.linAlg;
 
+import java.io.ObjectStreamException;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.*;
 import java.util.stream.DoubleStream;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import ch.dajay42.math.function.*;
 
@@ -35,7 +39,7 @@ public abstract class Matrix implements Serializable, IntToDoubleFunction, IntIn
 	public static double DEFAULT_SPARSE_LIMIT = 0.1d;
 	
 	/**Minimal number of operations required for parallelization to be efficient*/
-	public static int PARALLEL_LIMIT = 1024;//65536;
+	public static int PARALLEL_LIMIT = 4096;//65536;
 	
 	// FIELDS
 
@@ -204,6 +208,100 @@ public abstract class Matrix implements Serializable, IntToDoubleFunction, IntIn
 		matrix.fill(other::internalGetValueAt);
 		return matrix;
 	}
+	
+	
+	public static Matrix horzCat(Matrix left, Matrix right){
+		if(left.rows != right.rows){
+			throw new MatrixDimensionMismatchException();
+		}
+		Matrix out = zeroes(left.rows, left.cols + right.cols, left.isSparse() && right.isSparse());
+		out.getColsView(0,left.cols).fill(left);
+		out.getColsView(left.cols,right.cols).fill(right);
+		return out;
+	}
+	
+	public static Matrix vertCat(Matrix top, Matrix bottom){
+		if(top.cols != bottom.cols){
+			throw new MatrixDimensionMismatchException();
+		}
+		Matrix out = zeroes(top.rows + bottom.rows, top.cols, top.isSparse() && bottom.isSparse());
+		out.getRowsView(0, top.rows).fill(top);
+		out.getRowsView(top.rows, bottom.rows).fill(bottom);
+		return out;
+	}
+	
+	public static Matrix horzStack(Collection<Matrix> matrices){
+		int rows = matrices.stream().findFirst().orElseThrow().rows;
+		if(matrices.stream().anyMatch((matrix) -> matrix.rows != rows)){
+			throw new MatrixDimensionMismatchException();
+		}
+		int cols = matrices.stream().mapToInt(value -> value.cols).sum();
+		boolean sparse = matrices.stream().allMatch(Matrix::isSparse);
+		Matrix out = zeroes(rows, cols, sparse);
+		int col = 0;
+		for(Matrix matrix : matrices){
+			out.getColsView(col, matrix.cols).fill(matrix);
+			col += matrix.cols;
+		}
+		return out;
+	}
+	public static Matrix horzStack(Matrix... matrices){
+		return horzStack(Arrays.asList(matrices));
+	}
+	
+	public static Matrix vertStack(Collection<Matrix> matrices){
+		int cols = matrices.stream().findFirst().orElseThrow().cols;
+		if(matrices.stream().anyMatch((matrix) -> matrix.cols != cols)){
+			throw new MatrixDimensionMismatchException();
+		}
+		int rows = matrices.stream().mapToInt(value -> value.rows).sum();
+		boolean sparse = matrices.stream().allMatch(Matrix::isSparse);
+		Matrix out = zeroes(rows, cols, sparse);
+		int row = 0;
+		for(Matrix matrix : matrices){
+			out.getRowsView(row, matrix.rows).fill(matrix);
+			row += matrix.rows;
+		}
+		return out;
+	}
+	public static Matrix vertStack(Matrix... matrices){
+		return vertStack(Arrays.asList(matrices));
+	}
+	
+	public static Matrix diagStack(Collection<Matrix> matrices){
+		int rows = matrices.stream().mapToInt(value -> value.rows).sum();
+		int cols = matrices.stream().mapToInt(value -> value.cols).sum();
+		double elems = matrices.stream().mapToDouble(value -> value.elems * value.getFilledness()).sum();
+		boolean sparse = elems < rows * cols * DEFAULT_SPARSE_LIMIT;
+		
+		Matrix out = zeroes(rows, cols, sparse);
+		int row = 0, col = 0;
+		for(Matrix matrix : matrices){
+			out.getBlockView(row, col, matrix.rows, matrix.cols).fill(matrix);
+			row += matrix.rows;
+			col += matrix.cols;
+		}
+		return out;
+	}
+	public static Matrix diagStack(Matrix... matrices){
+		return diagStack(Arrays.asList(matrices));
+	}
+	
+	public static Matrix repMat(Matrix matrix, int horizontal, int vertical){
+		if(horizontal <= 0 || vertical <= 0){
+			throw new IllegalArgumentException("Arguments must be positive.");
+		}
+		Matrix out = zeroes(matrix.rows * horizontal, matrix.cols * vertical, matrix.isSparse());
+		for(int i = 0; i < horizontal; i++){
+			for(int j = 0; j < vertical; j++){
+				out.getBlockView(i * matrix.rows, j * matrix.cols, matrix.rows, matrix.cols).fill(matrix);
+			}
+		}
+		return out;
+	}
+	
+	
+	////////
 	
 	/**Method that intelligently copies a Matrix into its sparse or nonsparse equivalent.
 	 * <p> if in.isSparse() && in.getFilledness() > DEFAULT_SPARSE_LIMIT, returns a non-sparse copy of in.
@@ -500,9 +598,21 @@ public abstract class Matrix implements Serializable, IntToDoubleFunction, IntIn
 	 * @param row row
 	 * @return View of row
 	 */
-	public MatrixBlockView getRowView(int row){
+	public MatrixRowView getRowView(int row){
 		assertBounds(row, 0);
-		return new MatrixBlockView(this, row, 0, 1, cols);
+		return new MatrixRowView(row,this);
+	}
+	
+	/**Gets a View of the startRow-th through (startRow+rows)-th rows as Matrix
+	 * <p/>Runs in O(1).
+	 * @param startRow first row
+	 * @param rows number of rows
+	 * @return View of rows
+	 */
+	public MatrixRowsView getRowsView(int startRow, int rows){
+		assertBounds(startRow, 0);
+		assertBounds(startRow+rows, 0);
+		return new MatrixRowsView(startRow, rows, this);
 	}
 	
 	/**Replace the ith row with the given Vector
@@ -537,9 +647,21 @@ public abstract class Matrix implements Serializable, IntToDoubleFunction, IntIn
 	 * @param col column
 	 * @return View of column
 	 */
-	public MatrixBlockView getColumnView(int col){
+	public MatrixColView getColumnView(int col){
 		assertBounds(0, col);
-		return new MatrixBlockView(this, 0, col, rows, 1);
+		return new MatrixColView(col,this);
+	}
+	
+	/**Gets a View of the startCol-th through (startCol+cols)-th cols as Matrix
+	 * <p/>Runs in O(1).
+	 * @param startCol first col
+	 * @param cols number of lols
+	 * @return View of cols
+	 */
+	public MatrixRowsView getColsView(int startCol, int cols){
+		assertBounds(startCol, 0);
+		assertBounds(startCol+cols, 0);
+		return new MatrixRowsView(startCol, cols, this);
 	}
 	
 	/**Replace the jth column with the given Vector
@@ -682,6 +804,25 @@ public abstract class Matrix implements Serializable, IntToDoubleFunction, IntIn
 	}
 	
 	/**Fills Matrix with the given values.
+	 * The given double[] will be copied;
+	 * future changes to it will not be reflected in the Matrix,
+	 * and vice-versa.
+	 * The dimension of this and the array must agree.
+	 * <p/>Runs in O(rows*cols).
+	 * @param values values to fill the matrix with
+	 * @return this
+	 */
+	public Matrix fill(double[] values){
+		if(elems != values.length){
+			throw new MatrixDimensionMismatchException();
+		}
+		
+		for(int elem = 0; elem < elems; elem++)
+			internalSetValueAt(elem, values[elem]);
+		return this;
+	}
+	
+	/**Fills Matrix with the given values.
 	 * The given double[][] will be copied;
 	 * future changes to it will not be reflected in the Matrix,
 	 * and vice-versa.
@@ -752,8 +893,10 @@ public abstract class Matrix implements Serializable, IntToDoubleFunction, IntIn
 	 * @return product
 	 */
 	public double dot(Matrix b){
-		if(cols != b.rows || rows != 1 || b.cols != 1)
+		if(cols != b.rows)
 			throw new MatrixDimensionMismatchException();
+		if(rows != 1 || b.cols != 1)
+			throw new MatrixNotAVectorException();
 		return IntStream.range(0, cols).mapToDouble((elem) -> this.internalGetValueAt(elem) * b.internalGetValueAt(elem)).sum();
 	}
 
@@ -961,6 +1104,10 @@ public abstract class Matrix implements Serializable, IntToDoubleFunction, IntIn
 		return fill((elem) -> f.applyAsDouble(internalGetValueAt(elem), b));
 	}
 	
+	public long countWhere(DoublePredicate doublePredicate){
+		return stream().filter(doublePredicate).count();
+	}
+	
 	public MatrixLazy lazy(){
 		return new MatrixLazy(this);
 	}
@@ -972,17 +1119,32 @@ public abstract class Matrix implements Serializable, IntToDoubleFunction, IntIn
 	public double det(){
 		if(cols != rows)
 			throw new MatrixNotSquareException(rows, cols);
+		//TODO: factorization-based efficient impl.
+		return recursiveDet(true);
+	}
+	
+	protected double recursiveDet(boolean parallel){
 		if(cols == 1){
 			return getValueAt(0);
 		}else if(cols == 2){
 			return internalGetValueAt(0,0) * internalGetValueAt(1,1)
 					- internalGetValueAt(0,1) * internalGetValueAt(1,0);
-		}else { //TODO: factorization-based efficient impl.
+		}else {
 			final MatrixMaskedRowView bottom = exceptRowView(0);
-			return IntStream.range(0, cols).parallel().mapToDouble((col) ->
-					Math.pow(-1, col) * internalGetValueAt(0, col) * bottom.exceptColView(col).det())
+			IntStream intStream = parallel ? IntStream.range(0, cols).parallel() : IntStream.range(0, cols).sequential();
+			return intStream.mapToDouble((col) ->
+					Math.pow(-1, col) * internalGetValueAt(0, col) * bottom.exceptColView(col).recursiveDet(false))
 					.sum();
 		}
+	}
+	
+	
+	public Stream<MatrixRowView> rowViewStream(){
+		return IntStream.range(0, rows).mapToObj(this::getRowView);
+	}
+	
+	public Stream<MatrixColView> colViewStream(){
+		return IntStream.range(0, rows).mapToObj(this::getColumnView);
 	}
 	
 	
@@ -1003,7 +1165,6 @@ public abstract class Matrix implements Serializable, IntToDoubleFunction, IntIn
 			builder.append('[');
 			for(int col = 0; col < cols; col++){
 				if(col > 0) builder.append(',');
-				builder.append('\t');
 				builder.append(internalGetValueAt(row,col));
 			}
 			builder.append(']');
@@ -1012,5 +1173,63 @@ public abstract class Matrix implements Serializable, IntToDoubleFunction, IntIn
 		builder.append(']');
 		
 		return builder.toString();
+	}
+	
+	public static Matrix valueOf(String s){
+		ArrayList<ArrayList<Double>> values = new ArrayList<>();
+		ArrayList<Double> currentRow = new ArrayList<>();
+		StringBuilder currentValue = new StringBuilder();
+		boolean betweenRows = false;
+		for(char c : s.toCharArray()){
+			switch(c){
+				case '[':
+					if(betweenRows){
+						currentRow = new ArrayList<>();
+						currentValue = new StringBuilder();
+						betweenRows = false;
+					}else{
+						betweenRows = true;
+					}
+					break;
+				case ']':
+					if(betweenRows){
+						betweenRows = false;
+					}else {
+						if(currentValue.length() > 0){
+							currentRow.add(Double.valueOf(currentValue.toString()));
+						}
+						values.add(currentRow);
+						betweenRows = true;
+					}
+					break;
+				case ',':
+					if(!betweenRows){
+						if(currentValue.length() > 0){
+							currentRow.add(Double.valueOf(currentValue.toString()));
+							currentValue = new StringBuilder();
+						}
+					}
+					break;
+				default:
+					if(Character.isDigit(c)){
+						currentValue.append(c);
+					}
+			}
+		}
+		
+		int rows = values.size();
+		int cols = values.stream().mapToInt(ArrayList::size).max().orElseThrow();
+		double[][] doubles = new double[rows][cols];
+		for(int row = 0; row < rows; row++){
+			for(int col = 0; col < values.get(row).size(); col++){
+				doubles[row][col] = values.get(row).get(col);
+			}
+		}
+		
+		return filledWith(doubles);
+	}
+	
+	Object writeReplace() throws ObjectStreamException{
+		return new SerializedMatrix(this.toString());
 	}
 }

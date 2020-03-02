@@ -1,35 +1,27 @@
 package ch.dajay42.math.linAlg;
 
-public class MatrixMaskedColView extends Matrix{
-	
-	final Matrix base;
+public class MatrixMaskedColView extends MatrixView{
 	
 	final int maskedCol;
 	
 	public MatrixMaskedColView(Matrix base, int maskedCol){
-		super(base.rows, base.cols - 1);
-		this.base = base;
+		super(base.rows, base.cols - 1, base);
 		this.maskedCol = maskedCol;
 	}
 	
 	@Override
-	protected double internalGetValueAt(int row, int col){
-		return base.internalGetValueAt(row, col >= maskedCol ? col + 1 : col);
+	protected int transformElemIndex(int elem){
+		return asColIndex(elem) >= maskedCol ? elem + 1 : elem;
 	}
 	
 	@Override
-	protected double internalGetValueAt(int elem){
-		return base.internalGetValueAt(asColIndex(elem) >= maskedCol ? elem + 1 : elem);
+	protected int transformRowIndex(int row, int col){
+		return row;
 	}
 	
 	@Override
-	protected void internalSetValueAt(int row, int col, double val){
-		base.internalSetValueAt(row, col >= maskedCol ? col + 1 : col, val);
-	}
-	
-	@Override
-	protected void internalSetValueAt(int elem, double val){
-		base.internalSetValueAt(asColIndex(elem) >= maskedCol ? elem + 1 : elem, val);
+	protected int transformColIndex(int row, int col){
+		return col >= maskedCol ? col + 1 : col;
 	}
 	
 	@Override
@@ -40,10 +32,5 @@ public class MatrixMaskedColView extends Matrix{
 	@Override
 	public boolean isSparse(){
 		return false;
-	}
-	
-	@Override
-	public boolean isView(){
-		return true;
 	}
 }

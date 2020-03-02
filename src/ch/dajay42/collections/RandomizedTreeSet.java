@@ -1,335 +1,48 @@
 package ch.dajay42.collections;
 
-import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Set;
+import ch.dajay42.util.GloballyUniquePriority;
 
-import ch.dajay42.util.ArbitraryFixedBinaryString;
+import java.util.*;
 
 
-public class RandomizedTreeSet<E extends Comparable<? super E>> implements Set<E>, Serializable{
-
-	private static final long serialVersionUID = 1L;
-
-	enum Handedness{ROOT, LEFT, RIGHT, INVALID}
+public class RandomizedTreeSet<E> implements Set<E>, Queue<E>{
 	
-	class Node{
-		E value;
-		ArbitraryFixedBinaryString priority;
-		
-		Node parent = null;
-		Node left = null;
-		Node right = null;
-		
-		Node(E value){
-			this.value = value;
-			this.priority = new ArbitraryFixedBinaryString();
-		}
-
-		E getValue() {
-			return value;
-		}
-
-		ArbitraryFixedBinaryString getPriority() {
-			return priority;
-		}
-		
-		Handedness getHandedness(){
-			if(parent == null){
-				return Handedness.ROOT;
-			}else if(parent.left == this){
-				return Handedness.LEFT;
-			}else if(parent.right == this){
-				return Handedness.RIGHT;
-			}else{
-				return Handedness.INVALID;
-			}				
-		}
-		
-		void destroy(){
-			if(left != null){
-				left.destroy();
-			}
-			if(right != null){
-				right.destroy();
-			}
-			value = null;
-			priority = null;
-			left = null;
-			right = null;
-			parent = null;
-		}
-		
-		@Override
-		public String toString() {
-			return "Node("+value.toString()+"; "+priority.toString()+")";
-		}
-	}
-	
-
-	void rotateLeft(Node x){
-		Node p,u,v,w,y;
-		
-		Handedness h = x.getHandedness();
-		//get
-		p = x.parent;
-		y = x.right;
-		u = x.left;
-		v = y.left;
-		w = y.right;
-		
-		//set
-		x.parent = y;
-		x.left = u;
-		x.right = v;
-		y.left = x;
-		y.right = w;
-		
-		if(u != null) u.parent = x;
-		if(v != null) v.parent = x;
-		if(w != null) w.parent = y;
-		
-		switch (h) {
-		case ROOT:
-			root = y; y.parent = null;
-			break;
-
-		case LEFT:
-			p.left = y; y.parent = p;
-			break;
-
-		case RIGHT:
-			p.right = y; y.parent = p;
-			break;
-
-		default:
-			break;
-		}
-	}
-
-	void rotateRight(Node y){
-		Node p,u,v,w,x;
-		Handedness h = y.getHandedness();
-		//get
-		p = y.parent;
-		x = y.left;
-		u = x.left;
-		v = x.right;
-		w = y.right;
-		
-		//set
-		x.left = u;
-		x.right = y;
-		y.parent = x;
-		y.left = v;
-		y.right = w;
-		
-		if(u != null) u.parent = x;
-		if(v != null) v.parent = y;
-		if(w != null) w.parent = y;
-		
-		switch (h) {
-		case ROOT:
-			root = x; x.parent = null;
-			break;
-
-		case LEFT:
-			p.left = x; x.parent = p;
-			break;
-
-		case RIGHT:
-			p.right = x; x.parent = p;
-			break;
-
-		default:
-			break;
-		}
-	}
-	void restorePriorities(Node n){
-		restorePrioritiesUp(n);
-		restorePrioritiesDown(n);
-	}
-		
-	void restorePrioritiesUp(Node n){
-		while(n.parent != null && (n.priority.compareTo(n.parent.priority) < 0)){
-			Handedness h = n.getHandedness();
-			switch(h){
-				case LEFT:
-					rotateRight(n.parent);
-					break;
-				case RIGHT:
-					rotateLeft(n.parent);
-					break;
-				default:
-					break;
-			}
-		}
-	}
-	
-	void restorePrioritiesDown(Node n){
-		while(n.left != null || n.right != null){
-			boolean takeLeftRotateRight;
-			if(n.left != null && n.right != null){
-				if(n.left.priority.compareTo(n.right.priority) > 0){
-					//take right
-					takeLeftRotateRight = false;
-				}else{
-					//take left
-					takeLeftRotateRight = true;
-				}
-			}else if(n.left != null && n.right == null){
-				takeLeftRotateRight = true;
-			}else if(n.left == null && n.right != null){
-				takeLeftRotateRight = false;
-			}else{
-				break;
-			}
-			
-			if(takeLeftRotateRight){
-				if(n.priority.compareTo(n.left.priority) > 0)
-					rotateRight(n);
-				else
-					break;
-			}else{
-				if(n.priority.compareTo(n.right.priority) > 0)
-					rotateLeft(n);
-				else
-					break;
-			}
-		}
-	}
-	
-	void removeNode(Node n){
-		while(n.left != null && n.right != null){
-			if(n.left.priority.compareTo(n.right.priority) > 0){
-				//take right
-				rotateLeft(n);
-			}else{
-				//take left
-				rotateRight(n);
-			}
-		}
-		Node child;
-		if(n.left != null){
-			child = n.left;
-		}else{
-			child = n.right;
-		}
-		
-		if(child != null)
-			child.parent = n.parent;
-		
-		Handedness h = n.getHandedness();
-		switch(h){
-		case ROOT:
-			root = child;
-			break;
-		case LEFT:
-			n.parent.left = child;
-			break;
-		case RIGHT:
-			n.parent.right = child;
-			break;
-		default:
-			break;
-		}
-		
-	}
 	private Node root;
 	private int size;
 	
-	protected Node getNodeOf(E arg0) {
-		Node node = root;
-		int c;
-		while(node != null){
-			c = node.getValue().compareTo(arg0);
-			if(c == 0){
-				return node;
-			}else if(c > 0){
-				node = node.left;
-			}else{
-				node = node.right;
-			}
-		}
-		return null;
-	}
-
-	protected Node first(Node root){
-		Node node = root;
-		while(node.left != null){
-			node = node.left;
-		}
-		return node;
-	}
-
-	@Override
-	public Iterator<E> iterator() {
-		return new Iterator<E>(){
-			Node previous = null;
-			Node node = null;
-			@Override
-			public boolean hasNext() {
-				Node hasnode = node;
-				if(hasnode == null){
-					hasnode = first(root);
-					if(hasnode != null) return true;
-				}
-				//in-order walk
-				if(hasnode.right != null){
-					hasnode = first(hasnode.right);
-				}else{
-					//get parent of closest left-handed ancestor
-					while(hasnode.getHandedness().equals(Handedness.RIGHT)){
-						hasnode = hasnode.parent;
-					}
-					hasnode = hasnode.parent;
-				}
-				return hasnode != null;
-			}
+	private final Comparator<E> comparator;
 	
-			@Override
-			public E next() {
-				if(node == null){
-					node = first(root);
-					return node.value;
-				}
-				//in-order walk
-				previous = node;
-				if(node.right != null){
-					node = first(node.right);
-				}else{
-					//get parent of closest non-right-handed ancestor
-					while(node.getHandedness().equals(Handedness.RIGHT)){
-						node = node.parent;
-					}
-					node = node.parent;
-				}
-				return node.value;
-			}
-			
-			@Override
-			public void remove() {
-				removeNode(node);
-				node = previous;
-			}
-		};
-	}
-
 	public RandomizedTreeSet() {
 		size = 0;
 		root = null;
+		comparator = null;
 	}
 	
-
+	public RandomizedTreeSet(Comparator<E> comparator) {
+		size = 0;
+		root = null;
+		this.comparator = comparator;
+	}
+	
 	public RandomizedTreeSet(Collection<E> collection) {
 		this();
 		this.addAll(collection);
 	}
-
+	
+	public RandomizedTreeSet(Collection<E> collection, Comparator<E> comparator) {
+		this(comparator);
+		this.addAll(collection);
+	}
+	
+	
+	private int compareValues(E l, E r){
+		if(comparator != null)
+			return comparator.compare(l, r);
+		else
+			//noinspection unchecked
+			return ((Comparable<? super E>) l).compareTo(r);
+	}
+	
 	@Override
 	public boolean add(E arg0) {
 		Node newNode = new Node(arg0);
@@ -341,8 +54,8 @@ public class RandomizedTreeSet<E extends Comparable<? super E>> implements Set<E
 		
 		Node node = root;
 		int c;
-		while(node != null){
-			c = node.getValue().compareTo(arg0);
+		while(true){
+			c = compareValues(node.getValue(), arg0);
 			if(c == 0){
 				return false;
 			}else if(c > 0){
@@ -363,14 +76,58 @@ public class RandomizedTreeSet<E extends Comparable<? super E>> implements Set<E
 					restorePrioritiesUp(newNode);
 					return true;
 				}else{
-				node = node.right;
+					node = node.right;
 				}
 			}
 		}
-		return false;
 	}
-
-
+	
+	@Override
+	public boolean offer(E e){
+		return add(e);
+	}
+	
+	@Override
+	public E remove(){
+		if(root != null){
+			E head = root.value;
+			removeNode(root);
+			return head;
+		}else{
+			throw new NoSuchElementException();
+		}
+	}
+	
+	@Override
+	public E poll(){
+		if(root != null){
+			E head = root.value;
+			removeNode(root);
+			return head;
+		}else{
+			return null;
+		}
+	}
+	
+	@Override
+	public E element(){
+		if(root != null){
+			return root.value;
+		}else{
+			throw new NoSuchElementException();
+		}
+	}
+	
+	@Override
+	public E peek(){
+		if(root != null){
+			return root.value;
+		}else{
+			return null;
+		}
+	}
+	
+	
 	@Override
 	public boolean addAll(Collection<? extends E> arg0) {
 		boolean b = false;
@@ -387,15 +144,11 @@ public class RandomizedTreeSet<E extends Comparable<? super E>> implements Set<E
 		root = null;
 		size = 0;
 	}
-
-	public boolean contains(E arg0) {
-		Node node = getNodeOf(arg0);
-		return (node != null);
-	}
 	
 	@Override
 	public boolean contains(Object arg0) {
-		return false;
+		Node node = getNodeOf(arg0);
+		return (node != null);
 	}
 
 
@@ -407,14 +160,14 @@ public class RandomizedTreeSet<E extends Comparable<? super E>> implements Set<E
 		}
 		return b;
 	}
-
-
+	
 	@Override
 	public boolean isEmpty() {
 		return size == 0;
 	}
-
-	public boolean remove(E arg0){
+	
+	@Override
+	public boolean remove(Object arg0) {
 		Node node = getNodeOf(arg0);
 		if(node != null){
 			removeNode(node);
@@ -423,11 +176,6 @@ public class RandomizedTreeSet<E extends Comparable<? super E>> implements Set<E
 		}else{
 			return false;
 		}
-
-	}
-	@Override
-	public boolean remove(Object arg0) {
-		return false;
 	}
 
 
@@ -444,6 +192,7 @@ public class RandomizedTreeSet<E extends Comparable<? super E>> implements Set<E
 	@Override
 	public boolean retainAll(Collection<?> arg0) {
 		RandomizedTreeSet<E> diff = new RandomizedTreeSet<>(this);
+		//noinspection SuspiciousMethodCalls
 		diff.removeAll(arg0);
 		
 		if(!diff.isEmpty()){
@@ -471,15 +220,14 @@ public class RandomizedTreeSet<E extends Comparable<? super E>> implements Set<E
 		}
 		return objects;
 	}
-
-
+	
 	@SuppressWarnings("unchecked")
 	@Override
 	public <T> T[] toArray(T[] arg0) throws ArrayStoreException{
 		if(arg0.length <= size){
 			int i = 0;
 			for(E e : this){
-				arg0[i] = (T) e;
+				((Object[]) arg0)[i] = e;
 				i++;
 			}
 			if(i < arg0.length){
@@ -496,14 +244,302 @@ public class RandomizedTreeSet<E extends Comparable<? super E>> implements Set<E
 			return ret;
 		}
 	}
-
+	
+	
+	
+	
+	enum Handedness{ROOT, LEFT, RIGHT, INVALID}
+	
+	class Node{
+		E value;
+		GloballyUniquePriority priority;
+		
+		Node parent = null;
+		Node left = null;
+		Node right = null;
+		
+		Node(E value){
+			this.value = value;
+			this.priority = new GloballyUniquePriority();
+		}
+		
+		E getValue() {
+			return value;
+		}
+		
+		GloballyUniquePriority getPriority() {
+			return priority;
+		}
+		
+		Handedness getHandedness(){
+			if(parent == null){
+				return Handedness.ROOT;
+			}else if(parent.left == this){
+				return Handedness.LEFT;
+			}else if(parent.right == this){
+				return Handedness.RIGHT;
+			}else{
+				return Handedness.INVALID;
+			}
+		}
+		
+		void destroy(){
+			if(left != null){
+				left.destroy();
+			}
+			if(right != null){
+				right.destroy();
+			}
+			value = null;
+			priority = null;
+			left = null;
+			right = null;
+			parent = null;
+		}
+		
+		@Override
+		public String toString() {
+			return "Node("+value.toString()+"; "+priority.toString()+")";
+		}
+	}
+	
+	@SuppressWarnings("unchecked")
+	Node getNodeOf(Object arg0) throws ClassCastException{
+		E e = (E) arg0;
+		Node node = root;
+		while(node != null){
+			int c = compareValues(e, node.getValue());
+			if(c == 0){
+				return node;
+			}else if(c < 0){
+				node = node.left;
+			}else{
+				node = node.right;
+			}
+		}
+		return null;
+	}
+	
+	private Node firstChild(Node current){
+		if(current == null) return null;
+		while(current.left != null){
+			current = current.left;
+		}
+		return current;
+	}
+	
+	private Node lastChild(Node current){
+		if(current == null) return null;
+		while(current.right != null){
+			current = current.right;
+		}
+		return current;
+	}
+	
+	private Node nextNode(Node current){
+		if(current == null) return null;
+		//in-order Walk
+		if(current.right != null){
+			return firstChild(current.right);
+		} else {
+			//get parent of closest non-right-handed ancestor
+			while(current.getHandedness().equals(Handedness.RIGHT)){
+				current = current.parent;
+			}
+			return current.parent;
+		}
+	}
+	
+	private Node prevNode(Node current){
+		if(current == null) return null;
+		//reverse in-order Walk
+		if(current.left != null){
+			return lastChild(current.left);
+		} else {
+			//get parent of closest non-left-handed ancestor
+			while(current.getHandedness().equals(Handedness.LEFT)){
+				current = current.parent;
+			}
+			return current.parent;
+		}
+	}
+	
+	@SuppressWarnings("SuspiciousNameCombination")
+	private void rotateLeft(Node x){
+		Node p,u,v,w,y;
+		
+		Handedness h = x.getHandedness();
+		//get
+		p = x.parent;
+		y = x.right;
+		u = x.left;
+		v = y.left;
+		w = y.right;
+		
+		//set
+		x.parent = y;
+		x.left = u;
+		x.right = v;
+		y.left = x;
+		y.right = w;
+		
+		if(u != null) u.parent = x;
+		if(v != null) v.parent = x;
+		if(w != null) w.parent = y;
+		
+		switch (h) {
+			case ROOT:
+				root = y; y.parent = null;
+				break;
+			
+			case LEFT:
+				p.left = y; y.parent = p;
+				break;
+			
+			case RIGHT:
+				p.right = y; y.parent = p;
+				break;
+			
+			default:
+				break;
+		}
+	}
+	
+	@SuppressWarnings("SuspiciousNameCombination")
+	private void rotateRight(Node y){
+		Node p,u,v,w,x;
+		Handedness h = y.getHandedness();
+		//get
+		p = y.parent;
+		x = y.left;
+		u = x.left;
+		v = x.right;
+		w = y.right;
+		
+		//set
+		x.left = u;
+		x.right = y;
+		y.parent = x;
+		y.left = v;
+		y.right = w;
+		
+		if(u != null) u.parent = x;
+		if(v != null) v.parent = y;
+		if(w != null) w.parent = y;
+		
+		switch (h) {
+			case ROOT:
+				root = x; x.parent = null;
+				break;
+			
+			case LEFT:
+				p.left = x; x.parent = p;
+				break;
+			
+			case RIGHT:
+				p.right = x; x.parent = p;
+				break;
+			
+			default:
+				break;
+		}
+	}
+	
+	private void restorePriorities(Node n){
+		restorePrioritiesUp(n);
+		restorePrioritiesDown(n);
+	}
+	
+	private void restorePrioritiesUp(Node n){
+		while(n.parent != null && (n.priority.compareTo(n.parent.priority) < 0)){
+			Handedness h = n.getHandedness();
+			switch(h){
+				case LEFT:
+					rotateRight(n.parent);
+					break;
+				case RIGHT:
+					rotateLeft(n.parent);
+					break;
+				default:
+					break;
+			}
+		}
+	}
+	
+	private void restorePrioritiesDown(Node n){
+		while(n.left != null || n.right != null){
+			boolean takeLeftRotateRight;
+			//take smaller between right and left
+			if(n.left != null && n.right != null){
+				takeLeftRotateRight = n.left.priority.compareTo(n.right.priority) <= 0;
+			}else {
+				takeLeftRotateRight = n.left != null;
+			}
+			
+			if(takeLeftRotateRight){
+				if(n.priority.compareTo(n.left.priority) > 0)
+					rotateRight(n);
+				else
+					break;
+			}else{
+				if(n.priority.compareTo(n.right.priority) > 0)
+					rotateLeft(n);
+				else
+					break;
+			}
+		}
+	}
+	
+	private void removeNode(Node n){
+		while(n.left != null && n.right != null){
+			if(n.left.priority.compareTo(n.right.priority) > 0){
+				//take right
+				rotateLeft(n);
+			}else{
+				//take left
+				rotateRight(n);
+			}
+		}
+		Node child;
+		if(n.left != null){
+			child = n.left;
+		}else{
+			child = n.right;
+		}
+		
+		if(child != null)
+			child.parent = n.parent;
+		
+		Handedness h = n.getHandedness();
+		switch(h){
+			case ROOT:
+				root = child;
+				break;
+			case LEFT:
+				n.parent.left = child;
+				break;
+			case RIGHT:
+				n.parent.right = child;
+				break;
+			default:
+				break;
+		}
+		
+	}
+	
+	@Override
+	public Iterator<E> iterator() {
+		return new RandomizedTreeSetIterator();
+	}
+	
+	
 	public List<String> prettyPrint(){
 		return new PrettyPrinter().prettyPrint();
 	}
 	
 	class PrettyPrinter{
 
-		public List<String> prettyPrint(){
+		List<String> prettyPrint(){
 			return prettyPrint(root);
 		}
 		
@@ -515,8 +551,8 @@ public class RandomizedTreeSet<E extends Comparable<? super E>> implements Set<E
 		final String sLeft = "L-";
 		final String sRoot = "o-";
 		
-		public List<String> prettyPrint(Node node){
-			List<String> theList = new ArrayList<String>();
+		List<String> prettyPrint(Node node){
+			List<String> theList = new ArrayList<>();
 			if (node == null){
 				theList.add(sLeaf);
 				return theList;
@@ -571,13 +607,41 @@ public class RandomizedTreeSet<E extends Comparable<? super E>> implements Set<E
 		}
 	}
 	
-	public E pop(){
-		if(root != null){
-			E head = root.value;
-			removeNode(root);
-			return head;
-		}else{
-			return null;
+	private class RandomizedTreeSetIterator implements Iterator<E>{
+		Node node = null;
+		boolean first = true;
+		
+		@Override
+		public boolean hasNext() {
+			if(first){
+				return root != null;
+			}
+			else {
+				return nextNode(node) != null;
+			}
+		}
+		
+		@Override
+		public E next() {
+			if(first){
+				first = false;
+				node = firstChild(root);
+			}
+			else {
+				node = nextNode(node);
+			}
+			if(node == null) throw new NoSuchElementException();
+			return node.value;
+		}
+		
+		@Override
+		public void remove() {
+			Node prev = prevNode(node);
+			if(prev == null){
+				first = true;
+			}
+			removeNode(node);
+			node = prev;
 		}
 	}
 }

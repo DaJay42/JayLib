@@ -4,13 +4,13 @@ import java.util.Arrays;
 import java.util.Objects;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.function.*;
+import java.util.stream.IntStream;
 
 import ch.dajay42.application.*;
-import ch.dajay42.application.settings.*;
 import ch.dajay42.collections.*;
+import ch.dajay42.math.TernaryUnit;
 import ch.dajay42.math.Util;
 import ch.dajay42.math.linAlg.Matrix;
-import ch.dajay42.math.linAlg.MatrixLazy;
 
 
 public class Test {
@@ -18,7 +18,13 @@ public class Test {
 	public static void main(String[] args) {
 		//lazyMatrixTest();
 		//testParallelSetAll();
-		testSpeed(1000);
+		//testSpeed(1000);
+		//testGUP();
+		//testRTS();
+		//testRTS2();
+		//modTest();
+		//arrayClearTest();
+		testTernary();
 	}
 	
 	public static void testSpeed(int n){
@@ -63,14 +69,7 @@ public class Test {
 	
 	public static void testSCLI(String[] args){
 		SimpleCLI cli = new SimpleCLI();
-		SettingsManager manager = new SimpleSettingsManager("test.ini");
-		manager.registerSettings(
-				new SettingInteger("foo", 0),
-				new SettingDouble("bar", 1d),
-				new SettingString("baz", "Hello World")
-				);
-		cli.registerCommmands(new CmdGet(manager), 
-				new CmdSet(manager), 
+		cli.registerCommmands(
 				new Command("hello", "", "Hello World.") {
 					@Override
 					public void execute(String... args) {
@@ -124,10 +123,12 @@ public class Test {
 		RandomizedTreeSet<Integer> randomizedTreeSet = new RandomizedTreeSet<Integer>();
 		int steps = 65536;
 		int n = 1024;
-		int k;
+		int v = Action.values().length;
 		
-		for(k = 0; k < steps; k++){
-			int i = ThreadLocalRandom.current().nextInt(Action.values().length);
+		long time = System.nanoTime();
+		
+		for(int k = 0; k < steps; k++){
+			int i = ThreadLocalRandom.current().nextInt(v);
 			Action action = Action.values()[i];
 			Integer arg = ThreadLocalRandom.current().nextInt(n);
 			switch(action){
@@ -142,18 +143,23 @@ public class Test {
 					break;
 			}
 		}
+		
+		time = System.nanoTime() - time;
 		for(String s : randomizedTreeSet.prettyPrint())
 			System.out.println(s);
+		System.out.println(time/steps + "ns per op");
 	}
 	
-	public static void testAFS(){
+	public static void testGUP(){
 		int n = 32;
-		ArbitraryFixedBinaryString[] a = new ArbitraryFixedBinaryString[n];
-		for(int i = 0; i < n; i++){
-			a[i] = new ArbitraryFixedBinaryString();
+		GloballyUniquePriority[] a = new GloballyUniquePriority[n];
+		a[0] = GloballyUniquePriority.TOP;
+		a[1] = GloballyUniquePriority.BOTTOM;
+		for(int i = 2; i < n; i++){
+			a[i] = new GloballyUniquePriority();
 		}
 		Arrays.sort(a);
-		for(ArbitraryFixedBinaryString b : a){
+		for(GloballyUniquePriority b : a){
 			System.out.println(b.toString());
 		}
 	}
@@ -327,5 +333,93 @@ public class Test {
 		dhnext = Whh.transpose().multiplySimple(dhraw);
 		
 		return dhnext.cacheIfLazy();
+	}
+	
+	
+	public static void modTest(){
+		int t = 64;
+		int n = 1 << 24;
+		int q = ThreadLocalRandom.current().nextInt(1 << 8, 1 << 12);
+		int[] a = ThreadLocalRandom.current().ints(n, 0, q).toArray(),
+				b = ThreadLocalRandom.current().ints(n, 0, q).toArray(),
+				c = ThreadLocalRandom.current().ints(n, 0, q).toArray();
+		
+		int w = 0;
+		long time1 = System.nanoTime();
+		for(int k = 0; k < t; k++)
+		for(int i = 0; i < n; i++){
+			w = (w+a[i])%q;
+			a[i] = w;
+		}
+		time1 = System.nanoTime() - time1;
+		
+		w = 0;
+		long time2 = System.nanoTime();
+		for(int k = 0; k < t; k++)
+		for(int i = 0; i < n; i++){
+			w = w+b[i];
+			if(w>=q) w-=q;
+			b[i] = w;
+		}
+		time2 = System.nanoTime() - time2;
+		
+		w = 0;
+		long time3 = System.nanoTime();
+		for(int k = 0; k < t; k++)
+		for(int i = 0; i < n; i++){
+			w = w+c[i];
+			w = (w<q) ? w : w-q;
+			c[i] = w;
+		}
+		time3 = System.nanoTime() - time3;
+		
+		for(int i = 0; i < n; i++){
+			if(a[i] >= q || b[i] >= q || c[i] >= q) throw new AssertionError();
+		}
+		
+		System.out.println(String.format("Modulo time:\t%d\r\nBranch time:\t%d\r\nTernary time:\t%d\r\nRatio MB: %f\tRatio MT: %f\tRatio BT: %f",
+				time1, time2, time3,
+				(double)time1/(double)time2,(double)time1/(double)time3,(double)time2/(double)time3));
+	}
+	
+	
+	public static void arrayClearTest(){
+		int n = 20;
+		int tmax = 1 << 4;
+		long[] time1 = new long[n];
+		long[] time2 = new long[n];
+		long time;
+		for(int w = 0; w < n; ++w){
+			int q = 1 << (w+4);
+			Object[] data = new Object[q];
+			time = System.nanoTime();
+			for(int t = 0; t < tmax; ++t){
+				data = new Object[data.length];
+				Objects.requireNonNull(Objects.requireNonNullElse(data[ThreadLocalRandom.current().nextInt(q)], new Object()));
+			}
+			time1[w] = System.nanoTime() - time;
+			time = System.nanoTime();
+			for(int t = 0; t < tmax; ++t){
+				Arrays.fill(data, null);
+				Objects.requireNonNull(Objects.requireNonNullElse(data[ThreadLocalRandom.current().nextInt(q)], new Object()));
+			}
+			time2[w] = System.nanoTime() - time;
+		}
+		IntStream.range(0, n).forEach(value -> System.out.println(String.format("%d:\ttime using new:  %d\r\n\ttime using null: %d\r\n", value+4, time1[value],time2[value])));
+	}
+	
+	
+	public static void testTernary(){
+		for(TernaryUnit t : TernaryUnit.values()){
+			System.out.println(String.format("%s %s = %s", "not", t, TernaryUnit.not(t)));
+			for(TernaryUnit t1 : TernaryUnit.values()){
+				System.out.println(String.format("%s %s %s = %s", t, "and", t1, t.and(t1)));
+				System.out.println(String.format("%s %s %s = %s", t, "or", t1, t.or(t1)));
+				System.out.println(String.format("%s %s %s = %s", t, "nand", t1, t.nand(t1)));
+				System.out.println(String.format("%s %s %s = %s", t, "nor", t1, t.nor(t1)));
+				System.out.println(String.format("%s %s %s = %s", t, "xnor", t1, t.xnor(t1)));
+				System.out.println(String.format("%s %s %s = %s", t, "xor", t1, t.xor(t1)));
+			}
+		}
 	}
 }

@@ -1,16 +1,18 @@
 package ch.dajay42.application;
 
-import ch.dajay42.application.settings.SettingsManager;
+import ch.dajay42.application.config.Setting;
 
-public class CmdSet extends Command{
+import java.util.Map;
+
+public class CommandSet extends Command{
 	
-	SettingsManager settingsManager;
+	private Map<String, Setting> settingMap;
 
-	public CmdSet(SettingsManager settingsManager) {
+	public CommandSet(Map<String, Setting> settingMap) {
 		super("set", "<name> [to] <value>", "Sets the value of the Setting <name> to <value>.");
-		if(settingsManager == null)
+		if(settingMap == null)
 			throw new IllegalArgumentException();
-		this.settingsManager = settingsManager;
+		this.settingMap = settingMap;
 	}
 
 	@Override
@@ -23,8 +25,12 @@ public class CmdSet extends Command{
 					value = args[2];
 				else
 					value = args[1];
-				settingsManager.setValueOf(name, value);
-				System.out.println("Set '"+name+"' to '"+value+"'.");
+				if(settingMap.containsKey(name)){
+					settingMap.get(name).parse(value);
+					System.out.println("Set '" + name + "' to '" + settingMap.get(name).toString() + "'.");
+				}else {
+					System.out.println("Error: set: no such setting.");
+				}
 			}catch(Exception e){
 				System.out.println(e.getMessage());
 			}

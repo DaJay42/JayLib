@@ -1,6 +1,8 @@
 package ch.dajay42.application;
 
-public abstract class Command{
+import java.util.function.Consumer;
+
+public abstract class Command implements Consumer<String[]>{
 	
 	public static final Command EXIT = new Command("exit", "", "Ends the session.") {
 		@Override
@@ -24,4 +26,17 @@ public abstract class Command{
 	
 	public abstract void execute(String... args);
 	
+	@Override
+	public void accept(String[] strings){
+		execute(strings);
+	}
+	
+	public static Command create(String name, String argPattern, String descText, Consumer<String[]> consumer){
+		return new Command(name, argPattern, descText){
+			@Override
+			public void execute(String... args){
+				consumer.accept(args);
+			}
+		};
+	}
 }

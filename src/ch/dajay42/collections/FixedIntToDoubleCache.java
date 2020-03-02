@@ -18,7 +18,7 @@ public final class FixedIntToDoubleCache implements IntToDoubleFunction {
 	}
 	
 	public final double get(int key){
-		return values[key];
+		return valid[key] ? values[key] : 0.0d;
 	}
 	
 	public final void remove(int key){
@@ -31,6 +31,6 @@ public final class FixedIntToDoubleCache implements IntToDoubleFunction {
 
 	@Override
 	public final double applyAsDouble(int key) {
-		return values[key];
+		return valid[key] ? values[key] : 0.0d;
 	}
 }
